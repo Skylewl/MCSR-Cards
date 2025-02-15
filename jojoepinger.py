@@ -7,13 +7,24 @@ from cards import Card
 
 r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
-LEADERBOARD_ADRESS = "https://paceman.gg/stats/api/getLeaderboard?category=nether&type=count&days=9999&limit=999999"
-PB_ADRESS = "https://paceman.gg/stats/api/getLeaderboard?category=finish&type=fastest&days=9999&limit=999999"
-MC_PLAYERS_ADDRESS = "https://playerdb.co/api/player/minecraft/"
+PACEMAN_STATS_API = "https://paceman.gg/stats/api/"
+PLAYER_DB_API = "https://playerdb.co/api/"
+
+
+def query_api(url: str, *endpoint: str, **params) -> requests.Response:
+    url += "/".join(endpoint)
+    return requests.get(url, params=params, timeout=10)
 
 
 def update_player_list():
-    response = requests.get(LEADERBOARD_ADRESS)
+    response = query_api(
+        PACEMAN_STATS_API,
+        "getLeaderboard",
+        category="nether",
+        type="count",
+        days=9999,
+        limit=999999,
+    )
 
     if response.status_code == 200:
 
@@ -48,7 +59,14 @@ def update_player_list():
 
 
 def update_player_list_pbs():
-    response = requests.get(PB_ADRESS)
+    response = query_api(
+        PACEMAN_STATS_API,
+        "getLeaderboard",
+        category="finish",
+        type="fastest",
+        days=9999,
+        limit=999999,
+    )
 
     if response.status_code == 200:
 
@@ -81,19 +99,22 @@ def update_player_list_pbs():
 
 
 def get_random_player_name():
-    response = requests.get(
-        f"https://playerdb.co/api/player/minecraft/{roll_player.random_player()}"
-    )
-    player_name = response.json()["data"]["player"]["username"]
-    player_uuid = response.json()["data"]["player"]["id"]
+    response_json = query_api(
+        PLAYER_DB_API, "player", "minecraft", roll_player.random_player()
+    ).json()
+    player_name = response_json["data"]["player"]["username"]
+    player_uuid = response_json["data"]["player"]["id"]
     return player_name, player_uuid
 
 
 def stats_from_name(name):
-    response = requests.get(
-        f"https://paceman.gg/stats/api/getSessionStats?name={name}&hours=999999&hoursBetween=999999"
-    )
-    data = response.json()
+    data = query_api(
+        PACEMAN_STATS_API,
+        "getSessionStats",
+        name=name,
+        hours=999999,
+        hoursBetween=999999,
+    ).json()
     print(data)
     return data
 
@@ -113,7 +134,7 @@ def get_player_pb(uuid_to_find):
 
 
 def get_player_uuid(name):
-    response = requests.get(f"https://playerdb.co/api/player/minecraft/{name}")
+    response = query_api(PLAYER_DB_API, "player", "minecraft", name)
     uuid = response.json()["data"]["player"]["id"]
     return uuid
 

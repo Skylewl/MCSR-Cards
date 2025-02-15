@@ -7,7 +7,6 @@ from functools import partial
 import redis
 import discord
 from discord.ext import commands
-import requests
 import jojoepinger
 from bot_token import TOKEN
 
@@ -217,7 +216,9 @@ def show_player(interaction, name: str):  # SHOW PLAYER COMMAND
                 color=0xE74C3C,
             )
             return em
-        response = requests.get(f"https://playerdb.co/api/player/minecraft/{name}")
+        response = jojoepinger.query_api(
+            jojoepinger.PLAYER_DB_API, "player", "minecraft", name
+        )
         if response.status_code == 200:
             name = response.json()["data"]["player"]["username"]
         player = jojoepinger.create_card(name, player_stats)
@@ -242,7 +243,7 @@ def show_player(interaction, name: str):  # SHOW PLAYER COMMAND
             color=color,
         )
         if player.pb == 0:
-            em.add_field(name="**Paceman PB**", value=f"No PB", inline=False)
+            em.add_field(name="**Paceman PB**", value="No PB", inline=False)
         else:
             em.add_field(
                 name="**Paceman PB**",
@@ -317,8 +318,10 @@ def show_collection(interaction, member=None):
         em = discord.Embed(description="Collection does not have any cards.", color=0)
         return em
     new_collection_list = []
-    for i in collection_list:
-        response = requests.get(f"https://playerdb.co/api/player/minecraft/{i}")
+    for uuid in collection_list:
+        response = jojoepinger.query_api(
+            jojoepinger.PLAYER_DB_API, "player", "minecraft", uuid
+        )
         name = response.json()["data"]["player"]["username"]
         new_collection_list.append(ignore_underscore(name))
     new_collection_list = "\n".join(f"- {item}" for item in new_collection_list)
@@ -346,8 +349,7 @@ async def delete_card_tree_command(interaction: discord.Interaction, player_name
 
 
 def delete_card(interaction, player_name):
-    response = requests.get(f"https://playerdb.co/api/player/minecraft/{player_name}")
-    uuid = response.json()["data"]["player"]["id"]
+    uuid = jojoepinger.get_player_uuid(player_name)
     items = r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1)
     if uuid in items:
         r.lrem(
@@ -397,8 +399,8 @@ def trade_card(interaction, member, player_one, player_two=None):
     trade_offerer_id = interaction.author.id
     trade_acceptor_id = member.id
 
-    player_one_response = requests.get(
-        f"https://playerdb.co/api/player/minecraft/{player_one}"
+    player_one_response = jojoepinger.query_api(
+        jojoepinger.PLAYER_DB_API, "player", "minecraft", player_one
     )
     if player_one_response.status_code == 200:
         uuid_one = player_one_response.json()["data"]["player"]["id"]
@@ -414,8 +416,8 @@ def trade_card(interaction, member, player_one, player_two=None):
         return em, None
 
     if player_two is not None:
-        player_two_response = requests.get(
-            f"https://playerdb.co/api/player/minecraft/{player_two}"
+        player_two_response = jojoepinger.query_api(
+            jojoepinger.PLAYER_DB_API, "player", "minecraft", player_two
         )
         if player_two_response.status_code == 200:
             uuid_two = player_two_response.json()["data"]["player"]["id"]
