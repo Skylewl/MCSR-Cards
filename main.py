@@ -285,7 +285,7 @@ def show_player(interaction, name: str):  # SHOW PLAYER COMMAND
             description="Something went wrong trying to find that player.",
             color=0xE74C3C,
         )
-        with open("discord.log", "a") as f:
+        with open("discord.log", "a", encoding="utf-8") as f:
             f.write(str(e))
             f.close()
         return em

@@ -20,14 +20,16 @@ def update_player_list():
         data = response.json()
 
         with open(
-            "C:/Users/skylewl/Desktop/prjcts/mcsr_cards_discordbot/player_list.json",
+            "player_list.json",
             "w",
+            encoding="utf-8",
         ) as file:
             json.dump(data, file, indent=4)
 
         with open(
-            "C:/Users/skylewl/Desktop/prjcts/mcsr_cards_discordbot/player_list.json",
+            "player_list.json",
             "r",
+            encoding="utf-8",
         ) as file:
             original_data = json.load(file)
             filtered_data = [
@@ -53,14 +55,16 @@ def update_player_list_pbs():
         data = response.json()
 
         with open(
-            "C:/Users/skylewl/Desktop/prjcts/mcsr_cards_discordbot/player_list_pbs.json",
+            "player_list_pbs.json",
             "w",
+            encoding="utf-8",
         ) as file:
             json.dump(data, file, indent=4)
 
         with open(
-            "C:/Users/skylewl/Desktop/prjcts/mcsr_cards_discordbot/player_list_pbs.json",
+            "player_list_pbs.json",
             "r",
+            encoding="utf-8",
         ) as file:
             original_data = json.load(file)
         #     filtered_data = [{'uuid': item['uuid'], 'name': item['name']} for item in original_data]
