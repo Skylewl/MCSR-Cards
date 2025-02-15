@@ -4,3 +4,4 @@ discord.log
 bot_token.py
 player_list_pbs.json
 player_list.json
+__pycache__
