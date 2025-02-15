@@ -216,7 +216,7 @@ def show_player(interaction, name: str):  # SHOW PLAYER COMMAND
                 color=0xE74C3C,
             )
             return em
-        response_name, response_uuid = jojoepinger.get_player_identifiers(name)
+        response_name = jojoepinger.get_player_identifiers(name).name
         if response_name is not None:
             name = response_name
         player = jojoepinger.create_card(name, player_stats)
