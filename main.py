@@ -202,8 +202,8 @@ async def show_player_command(ctx, name: str):
 
 
 @bot.tree.command(name="player")
-async def show_player_tree_command(interaction: discord.Interaction):
-    em = show_player(interaction)
+async def show_player_tree_command(interaction: discord.Interaction, name: str):
+    em = show_player(interaction, name)
     await interaction.response.send_message(embed=em)
 
 
@@ -332,13 +332,13 @@ def ignore_underscore(s: str):
 
 @bot.command(name="delete", aliases=["remove", "deletecard", "removecard", "dc"])
 async def delete_card_command(ctx, player_name):
-    em = delete_card(interaction=ctx, player_name=player_name)
+    em = delete_card(interaction=ctx, player_uuid_or_name=player_name)
     await ctx.send(embed=em)
 
 
 @bot.tree.command(name="delete")
 async def delete_card_tree_command(interaction: discord.Interaction, player_name: str):
-    em = delete_card(interaction=interaction, player_name=player_name)
+    em = delete_card(interaction=interaction, player_uuid_or_name=player_name)
     await interaction.response.send_message(embed=em)
 
 
@@ -380,7 +380,7 @@ async def trade_card_tree_command(
     your_player: str,
     their_player: str | None,
 ):
-    em, view = delete_card(
+    em, view = trade_card(
         interaction=interaction,
         member=member,
         player_one=your_player,
