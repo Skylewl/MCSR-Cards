@@ -1,21 +1,15 @@
 import logging
-import redis
-import discord
-from bot_token import TOKEN
-from discord import app_commands
-from discord.ext import commands
-from discord.ext.commands import cooldown, BucketType
-import random
-import datetime
-import jojoepinger
 from time import gmtime
 from time import strftime
-import time
+import random
 from functools import partial
-import json
+
+import redis
+import discord
+from discord.ext import commands
 import requests
-from discord.utils import get
-from typing import Optional
+import jojoepinger
+from bot_token import TOKEN
 
 
 random.seed()

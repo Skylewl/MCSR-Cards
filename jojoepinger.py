@@ -1,9 +1,9 @@
-import requests
 import json
-import roll_player
+import requests
 import redis
-from cards import Card
 import discord
+import roll_player
+from cards import Card
 
 r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
