@@ -1,6 +1,6 @@
 import json
-import requests
 from collections import namedtuple
+import requests
 import redis
 import discord
 import roll_player
