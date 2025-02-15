@@ -5,3 +5,4 @@ bot_token.py
 player_list_pbs.json
 player_list.json
 __pycache__
+__pycache__/bot_token.cpython-312.pyc

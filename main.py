@@ -138,13 +138,12 @@ def roll_command(interaction): # ROLL COMMAND
                 if new_claims == 1:
                     r.expire(claims_key, 3600)  # Set expiry only on first claim
 
-                    
-                r.lpush(f'_s{interaction.guild.id}_claimed_cards', f'{str(card.uuid)}') # dont worry abt what i be doing
                 button.disabled = True
                 button.label = "Claimed"
                 button.style = discord.ButtonStyle.secondary
-                r.lpush(f'_u{interaction.user.id}_s{interaction.guild.id}_cards', str(card.uuid)) # dont worry abt what i be doing
-                r.set(f'_c{str(card.uuid)}_s{interaction.guild.id}', f'{interaction.user.id}') # dont worry abt what i be doing
+                r.lpush(f'_s{interaction.guild.id}_claimed_cards', f'{str(card.uuid)}') # set card as claimed in the server
+                r.lpush(f'_u{interaction.user.id}_s{interaction.guild.id}_cards', str(card.uuid)) # set card in users collection
+                r.set(f'_c{str(card.uuid)}_s{interaction.guild.id}', f'{interaction.user.id}') # set user to card 
                 await interaction.response.send_message(f'{interaction.user.mention} claimed: [{card.name}](<https://paceman.gg/stats/player/{card.name}>)!')
                 await interaction.message.edit(view=view)
         else:
