@@ -128,7 +128,7 @@ def roll_command(interaction):  # ROLL COMMAND
         color=color,
     )
     if random_card.pb == 0:
-        em.add_field(name="**Paceman PB**", value=f"No PB", inline=False)
+        em.add_field(name="**Paceman PB**", value="No PB", inline=False)
     else:
         em.add_field(
             name="**Paceman PB**",

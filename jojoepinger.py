@@ -37,7 +37,7 @@ def update_player_list():
         for item in filtered_data:
             r.lpush("_player_list", json.dumps(item))
 
-        em = discord.Embed(description=f"Updated player list", color=0)
+        em = discord.Embed(description="Updated player list", color=0)
         return em
     else:
         em = discord.Embed(description=f"Failed to fetch data: {response.status_code}")
@@ -68,7 +68,7 @@ def update_player_list_pbs():
         for item in original_data:
             r.set(f"_player_pb_{item['uuid']}", json.dumps(item))
 
-        em = discord.Embed(description=f"Updated players' PBs", color=0)
+        em = discord.Embed(description="Updated players' PBs", color=0)
         return em
     else:
         em = discord.Embed(description=f"Failed to fetch data: {response.status_code}")
