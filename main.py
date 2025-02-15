@@ -317,7 +317,9 @@ def show_collection(interaction, member=None):
         return em
     new_collection_list = []
     for uuid in collection_list:
-        new_collection_list.append(ignore_underscore(jojoepinger.get_player_identifiers(uuid).name))
+        new_collection_list.append(
+            ignore_underscore(jojoepinger.get_player_identifiers(uuid).name)
+        )
     new_collection_list = "\n".join(f"- {item}" for item in new_collection_list)
     em = discord.Embed(
         title=f"{member}'s Collection", description=f"{new_collection_list}", color=0

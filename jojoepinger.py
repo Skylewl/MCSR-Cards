@@ -13,6 +13,7 @@ PLAYER_DB_API = "https://playerdb.co/api/"
 
 PlayerIdentifiers = namedtuple("PlayerIdentifiers", ["name", "uuid"])
 
+
 def query_api(url: str, *endpoint: str, **params) -> requests.Response:
     url += "/".join(endpoint)
     return requests.get(url, params=params, timeout=10)
@@ -131,12 +132,12 @@ def get_player_pb(uuid_to_find):
 
 
 def get_player_identifiers(uuid_or_name):
-    response = query_api(
-        PLAYER_DB_API, "player", "minecraft", uuid_or_name
-    )
+    response = query_api(PLAYER_DB_API, "player", "minecraft", uuid_or_name)
     if response.status_code == 200:
         data = response.json()
-        return PlayerIdentifiers(data["data"]["player"]["username"], data["data"]["player"]["id"])
+        return PlayerIdentifiers(
+            data["data"]["player"]["username"], data["data"]["player"]["id"]
+        )
     return PlayerIdentifiers(None, None)
 
 
