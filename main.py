@@ -88,7 +88,7 @@ def roll_command(interaction):  # ROLL COMMAND
     if new_rolls == 1:
         r.expire(rolls_key, 3600)  # Set expiry only on first roll
 
-    for i in range(10):
+    for _ in range(10):
         player_name, player_uuid = jojoepinger.get_random_player_name()
         player_stats = jojoepinger.stats_from_name(player_name)
         if "error" in player_stats:
@@ -216,11 +216,9 @@ def show_player(interaction, name: str):  # SHOW PLAYER COMMAND
                 color=0xE74C3C,
             )
             return em
-        response = jojoepinger.query_api(
-            jojoepinger.PLAYER_DB_API, "player", "minecraft", name
-        )
-        if response.status_code == 200:
-            name = response.json()["data"]["player"]["username"]
+        response_name, response_uuid = jojoepinger.get_player_identifiers(name)
+        if response_name is not None:
+            name = response_name
         player = jojoepinger.create_card(name, player_stats)
         if player.value > 784:
             color = mythic
@@ -319,11 +317,7 @@ def show_collection(interaction, member=None):
         return em
     new_collection_list = []
     for uuid in collection_list:
-        response = jojoepinger.query_api(
-            jojoepinger.PLAYER_DB_API, "player", "minecraft", uuid
-        )
-        name = response.json()["data"]["player"]["username"]
-        new_collection_list.append(ignore_underscore(name))
+        new_collection_list.append(ignore_underscore(jojoepinger.get_player_identifiers(uuid).name))
     new_collection_list = "\n".join(f"- {item}" for item in new_collection_list)
     em = discord.Embed(
         title=f"{member}'s Collection", description=f"{new_collection_list}", color=0
@@ -348,19 +342,19 @@ async def delete_card_tree_command(interaction: discord.Interaction, player_name
     await interaction.response.send_message(embed=em)
 
 
-def delete_card(interaction, player_name):
-    uuid = jojoepinger.get_player_uuid(player_name)
+def delete_card(interaction, player_uuid_or_name):
+    player_name, player_uuid = jojoepinger.get_player_identifiers(player_uuid_or_name)
     items = r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1)
-    if uuid in items:
+    if player_uuid in items:
         r.lrem(
             f"_u{interaction.author.id}_s{interaction.guild.id}_cards",
             count=1,
-            value=uuid,
+            value=player_uuid,
         )
-        r.lrem(f"_s{interaction.guild.id}_claimed_cards", count=1, value=uuid)
-        r.delete(f"_c{uuid}_s{interaction.guild.id}", f"{interaction.author.id}")
+        r.lrem(f"_s{interaction.guild.id}_claimed_cards", count=1, value=player_uuid)
+        r.delete(f"_c{player_uuid}_s{interaction.guild.id}", f"{interaction.author.id}")
         em = discord.Embed(
-            description=f"Deleted {ignore_underscore(response.json()['data']['player']['username'])} from your collection",
+            description=f"Deleted {ignore_underscore(player_name)} from your collection",
             color=0,
         )
     else:
@@ -399,12 +393,8 @@ def trade_card(interaction, member, player_one, player_two=None):
     trade_offerer_id = interaction.author.id
     trade_acceptor_id = member.id
 
-    player_one_response = jojoepinger.query_api(
-        jojoepinger.PLAYER_DB_API, "player", "minecraft", player_one
-    )
-    if player_one_response.status_code == 200:
-        uuid_one = player_one_response.json()["data"]["player"]["id"]
-        name_one = player_one_response.json()["data"]["player"]["username"]
+    name_one, uuid_one = jojoepinger.get_player_identifiers(player_one)
+    if uuid_one is not None:
         collection_one = r.lrange(
             f"_u{trade_offerer_id}_s{interaction.guild.id}_cards", 0, -1
         )
@@ -416,12 +406,8 @@ def trade_card(interaction, member, player_one, player_two=None):
         return em, None
 
     if player_two is not None:
-        player_two_response = jojoepinger.query_api(
-            jojoepinger.PLAYER_DB_API, "player", "minecraft", player_two
-        )
-        if player_two_response.status_code == 200:
-            uuid_two = player_two_response.json()["data"]["player"]["id"]
-            name_two = player_two_response.json()["data"]["player"]["username"]
+        name_two, uuid_two = jojoepinger.get_player_identifiers(player_two)
+        if uuid_two is not None:
             collection_two = r.lrange(
                 f"_u{trade_acceptor_id}_s{interaction.guild.id}_cards", 0, -1
             )

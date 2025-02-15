@@ -1,5 +1,6 @@
 import json
 import requests
+from collections import namedtuple
 import redis
 import discord
 import roll_player
@@ -10,6 +11,7 @@ r = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 PACEMAN_STATS_API = "https://paceman.gg/stats/api/"
 PLAYER_DB_API = "https://playerdb.co/api/"
 
+PlayerIdentifiers = namedtuple("PlayerIdentifiers", ["name", "uuid"])
 
 def query_api(url: str, *endpoint: str, **params) -> requests.Response:
     url += "/".join(endpoint)
@@ -99,12 +101,7 @@ def update_player_list_pbs():
 
 
 def get_random_player_name():
-    response_json = query_api(
-        PLAYER_DB_API, "player", "minecraft", roll_player.random_player()
-    ).json()
-    player_name = response_json["data"]["player"]["username"]
-    player_uuid = response_json["data"]["player"]["id"]
-    return player_name, player_uuid
+    return get_player_identifiers(roll_player.random_player())
 
 
 def stats_from_name(name):
@@ -133,17 +130,21 @@ def get_player_pb(uuid_to_find):
     return player_pb
 
 
-def get_player_uuid(name):
-    response = query_api(PLAYER_DB_API, "player", "minecraft", name)
-    uuid = response.json()["data"]["player"]["id"]
-    return uuid
+def get_player_identifiers(uuid_or_name):
+    response = query_api(
+        PLAYER_DB_API, "player", "minecraft", uuid_or_name
+    )
+    if response.status_code == 200:
+        data = response.json()
+        return PlayerIdentifiers(data["data"]["player"]["username"], data["data"]["player"]["id"])
+    return PlayerIdentifiers(None, None)
 
 
 def create_card(name, player_stats, uuid=None):
     player_name = name
     player_uuid = uuid
     if player_uuid is None:
-        player_uuid = get_player_uuid(player_name)
+        player_uuid = get_player_identifiers(player_name).uuid
     player_image = f"https://mc-heads.net/body/{player_name}"
     player_pb = get_player_pb(player_uuid)
     player_nea = minutes_to_seconds(player_stats["nether"]["avg"])
