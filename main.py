@@ -56,6 +56,36 @@ async def ping(ctx):
     await ctx.send("pong")
 
 
+@bot.command(name="cooldown")
+async def cooldown(ctx):
+    em = cooldown_command(interaction=ctx)
+    await ctx.send(embed=em)
+
+
+@bot.tree.command(name="cooldown")
+async def cooldown_tree(interaction: discord.Interaction):
+    em = cooldown_command(interaction=interaction)
+    await interaction.response.send_message(embed=em)
+
+
+def cooldown_command(interaction):
+    rolls_key = f"_u{interaction.author.id}_s{interaction.guild.id}_rolls"
+    claims_key = f"_u{interaction.author.id}_s{interaction.guild.id}_claims"
+    rolls_message = "All 10 rolls are available."
+    claims_message = "All 3 claims are available."
+    if r.exists(rolls_key):
+        time_left = r.ttl(rolls_key)
+        timestamp = floor(time() + int(time_left))
+        rolls_message = f"Your 10 rolls are available in <t:{timestamp}:R>"
+    if r.exists(claims_key):
+        time_left = r.ttl(claims_key)
+        timestamp = floor(time() + int(time_left))
+        claims_message = f"Your 3 claims are available in <t:{timestamp}:R>"
+    em = discord.Embed(title="Cooldowns", color=0)
+    em.add_field(name="Rolls", value=rolls_message, inline=False)
+    em.add_field(name="Claims", value=claims_message, inline=False)
+    return em
+
 @bot.command(name="roll")
 async def roll(ctx):
     em, view = roll_command(interaction=ctx)
