@@ -3,6 +3,7 @@ from collections import namedtuple
 import requests
 import redis
 import discord
+from cachetools import cached, TTLCache
 import roll_player
 from cards import Card
 
@@ -131,6 +132,7 @@ def get_player_pb(uuid_to_find):
     return player_pb
 
 
+@cached(TTLCache(ttl=86400, maxsize=2000))
 def get_player_identifiers(uuid_or_name):
     response = query_api(PLAYER_DB_API, "player", "minecraft", uuid_or_name)
     if response.status_code == 200:
