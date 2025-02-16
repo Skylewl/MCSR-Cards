@@ -23,7 +23,6 @@ intents.members = True
 handler = logging.FileHandler(
     filename="discord.log", encoding="utf-8", mode="w"
 )  # log file
-# tree = app_commands.CommandTree
 bot = commands.Bot(command_prefix=["!", "$"], intents=intents)
 
 # embed colors
@@ -128,9 +127,6 @@ def roll_command(interaction):  # ROLL COMMAND
             value=f'{strftime("**%M:%S**", gmtime(random_card.pb))}',
             inline=False,
         )
-    # em.add_field(name="Enter average", value=f'{strftime("%M:%S", gmtime(random_card.nea))}', inline=False)
-    # em.add_field(name="Second structure average", value=f'{strftime("%M:%S", gmtime(random_card.ssa))}', inline=False)
-    # em.add_field(name="First portal average", value=f'{strftime("%M:%S", gmtime(random_card.fpa))}', inline=False)
     em.set_image(url=random_card.image)
     if f"{random_card.uuid}" not in r.lrange(
         f"_s{interaction.guild.id}_claimed_cards", 0, -1
