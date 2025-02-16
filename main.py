@@ -74,13 +74,15 @@ def cooldown_command(interaction):
     rolls_message = "All 10 rolls are available."
     claims_message = "All 3 claims are available."
     if r.exists(rolls_key):
+        rolls = r.get(rolls_key)
         time_left = r.ttl(rolls_key)
         timestamp = floor(time() + int(time_left))
-        rolls_message = f"Your 10 rolls are available in <t:{timestamp}:R>"
+        rolls_message = f"You have {10-int(rolls)} rolls available & all 10 reset in <t:{timestamp}:R>"
     if r.exists(claims_key):
+        claims = r.get(claims_key)
         time_left = r.ttl(claims_key)
         timestamp = floor(time() + int(time_left))
-        claims_message = f"Your 3 claims are available in <t:{timestamp}:R>"
+        claims_message = f"You have {3-int(claims)} claims available & all 3 reset in <t:{timestamp}:R>"
     em = discord.Embed(title="Cooldowns", color=0)
     em.add_field(name="Rolls", value=rolls_message, inline=False)
     em.add_field(name="Claims", value=claims_message, inline=False)
