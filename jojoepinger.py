@@ -106,6 +106,8 @@ def get_random_player_name():
     return get_player_identifiers(roll_player.random_player())
 
 
+# TODO: this doesnt all need to be cached since cards only use some of the data
+@cached(TTLCache(ttl=86400, maxsize=2000))
 def stats_from_name(name):
     data = query_api(
         PACEMAN_STATS_API,
