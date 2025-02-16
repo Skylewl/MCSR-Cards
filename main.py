@@ -1,7 +1,7 @@
 import logging
-from time import gmtime
-from time import strftime
+from time import gmtime, strftime, time
 import random
+from math import floor
 from functools import partial
 
 import redis
@@ -56,6 +56,39 @@ async def ping(ctx):
     await ctx.send("pong")
 
 
+@bot.command(name="cooldown")
+async def cooldown(ctx):
+    em = cooldown_command(interaction=ctx)
+    await ctx.send(embed=em)
+
+
+@bot.tree.command(name="cooldown")
+async def cooldown_tree(interaction: discord.Interaction):
+    em = cooldown_command(interaction=interaction)
+    await interaction.response.send_message(embed=em)
+
+
+def cooldown_command(interaction):
+    rolls_key = f"_u{interaction.author.id}_s{interaction.guild.id}_rolls"
+    claims_key = f"_u{interaction.author.id}_s{interaction.guild.id}_claims"
+    rolls_message = "All 10 rolls are available."
+    claims_message = "All 3 claims are available."
+    if r.exists(rolls_key):
+        rolls = r.get(rolls_key)
+        time_left = r.ttl(rolls_key)
+        timestamp = floor(time() + int(time_left))
+        rolls_message = f"You have {10-int(rolls)} rolls available & all 10 reset in <t:{timestamp}:R>"
+    if r.exists(claims_key):
+        claims = r.get(claims_key)
+        time_left = r.ttl(claims_key)
+        timestamp = floor(time() + int(time_left))
+        claims_message = f"You have {3-int(claims)} claims available & all 3 reset in <t:{timestamp}:R>"
+    em = discord.Embed(title="Cooldowns", color=0)
+    em.add_field(name="Rolls", value=rolls_message, inline=False)
+    em.add_field(name="Claims", value=claims_message, inline=False)
+    return em
+
+
 @bot.command(name="roll")
 async def roll(ctx):
     em, view = roll_command(interaction=ctx)
@@ -76,9 +109,9 @@ def roll_command(interaction):  # ROLL COMMAND
     rolls = r.get(rolls_key)
     if rolls is not None and int(rolls) >= 10:
         time_left = r.ttl(rolls_key)
-        minutes, seconds = divmod(int(time_left), 60)
+        timestamp = floor(time() + int(time_left))
         em = discord.Embed(
-            description=f"You used all 10 of your rolls, check back in {minutes:02}:{seconds:02}",
+            description=f"You used all 10 of your rolls, check back in <t:{timestamp}:R>",
             color=0xE74C3C,
         )
         view = None
@@ -152,9 +185,9 @@ def roll_command(interaction):  # ROLL COMMAND
             claims = r.get(claims_key)
             if claims is not None and int(claims) >= 3:
                 time_left = r.ttl(claims_key)
-                minutes, seconds = divmod(int(time_left), 60)
+                timestamp = floor(time() + int(time_left))
                 em = discord.Embed(
-                    description=f"You used all 3 of your claims this hour, check back in {minutes:02}:{seconds:02}",
+                    description=f"You used all 3 of your claims this hour, check back in <t:{timestamp}:R>",
                     color=0xE74C3C,
                 )
                 await interaction.response.send_message(embed=em)
