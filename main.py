@@ -86,6 +86,7 @@ def cooldown_command(interaction):
     em.add_field(name="Claims", value=claims_message, inline=False)
     return em
 
+
 @bot.command(name="roll")
 async def roll(ctx):
     em, view = roll_command(interaction=ctx)
