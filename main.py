@@ -11,7 +11,6 @@ import jojoepinger
 from bot_token import TOKEN
 
 
-random.seed()
 r = redis.Redis(
     host="localhost", port=6379, db=0, decode_responses=True
 )  # redis used as database
@@ -76,12 +75,12 @@ def cooldown_command(interaction):
         rolls = r.get(rolls_key)
         time_left = r.ttl(rolls_key)
         timestamp = floor(time() + int(time_left))
-        rolls_message = f"You have {10-int(rolls)} rolls available & all 10 reset in <t:{timestamp}:R>"
+        rolls_message = f"You have {10-int(rolls)} rolls available & all 10 reset <t:{timestamp}:R>"
     if r.exists(claims_key):
         claims = r.get(claims_key)
         time_left = r.ttl(claims_key)
         timestamp = floor(time() + int(time_left))
-        claims_message = f"You have {3-int(claims)} claims available & all 3 reset in <t:{timestamp}:R>"
+        claims_message = f"You have {3-int(claims)} claims available & all 3 reset <t:{timestamp}:R>"
     em = discord.Embed(title="Cooldowns", color=0)
     em.add_field(name="Rolls", value=rolls_message, inline=False)
     em.add_field(name="Claims", value=claims_message, inline=False)
@@ -91,6 +90,7 @@ def cooldown_command(interaction):
 @bot.command(name="roll")
 async def roll(ctx):
     em, view = roll_command(interaction=ctx)
+    print('asdf')
     print(em)
     await ctx.send(embed=em, view=view)
 
@@ -105,12 +105,14 @@ async def roll_tree(interaction: discord.Interaction):
 
 def roll_command(interaction):  # ROLL COMMAND
     rolls_key = f"_u{interaction.author.id}_s{interaction.guild.id}_rolls"  # roll cooldown logic
+    if interaction.author.id == 238333085861675009:
+        r.decr(rolls_key)
     rolls = r.get(rolls_key)
     if rolls is not None and int(rolls) >= 10:
         time_left = r.ttl(rolls_key)
         timestamp = floor(time() + int(time_left))
         em = discord.Embed(
-            description=f"You used all 10 of your rolls, check back in <t:{timestamp}:R>",
+            description=f"You used all 10 of your rolls, check back <t:{timestamp}:R>",
             color=0xE74C3C,
         )
         view = None
@@ -183,7 +185,7 @@ def roll_command(interaction):  # ROLL COMMAND
                 time_left = r.ttl(claims_key)
                 timestamp = floor(time() + int(time_left))
                 em = discord.Embed(
-                    description=f"You used all 3 of your claims this hour, check back in <t:{timestamp}:R>",
+                    description=f"You used all 3 of your claims this hour, check back <t:{timestamp}:R>",
                     color=0xE74C3C,
                 )
                 await interaction.response.send_message(embed=em)
@@ -212,12 +214,20 @@ def roll_command(interaction):  # ROLL COMMAND
             await interaction.message.edit(view=view)
 
     else:
-        owner = r.get(f"_c{random_card.uuid}_s{interaction.guild.id}")
-        user = interaction.guild.get_member(int(owner))
-        em.set_footer(
-            text=f"Emeralds: {random_card.value} | Owned by {user}",
-            icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
-        )
+            owner = r.get(f"_c{random_card.uuid}_s{interaction.guild.id}")
+            user = interaction.guild.get_member(int(owner))
+            em.set_footer(
+                text=f"Emeralds: {random_card.value} | Owned by {user}",
+                icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
+            )
+            button = discord.ui.Button(label="Claimed", style=discord.ButtonStyle.secondary, disabled=True)
+            view = discord.ui.View()
+            async def button_callback(interaction: discord.Interaction,):
+                return
+            button.callback = partial(button_callback)
+            view.add_item(button)
+            return em, view
+
     view = discord.ui.View()
     button.callback = partial(button_callback, card=random_card)
     view.add_item(button)

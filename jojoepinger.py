@@ -50,6 +50,8 @@ def update_player_list():
             filtered_data = [
                 {"uuid": item["uuid"], "name": item["name"]} for item in original_data
             ]
+        
+        r.delete("_player_list")
 
         for item in filtered_data:
             r.lpush("_player_list", json.dumps(item))
