@@ -356,18 +356,18 @@ async def collection_tree_command(
 def show_collection(interaction, member=None):
     if member is None:
         member = interaction.author
-        if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1):
+    if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1):
             em = recalculate_emeralds(interaction=interaction)
             return em
-        bottom_index = 0
-        top_index = -1
-        collection_list = r.lrange(
+    bottom_index = 0
+    top_index = -1
+    collection_list = r.lrange(
             f"_u{member.id}_s{interaction.guild.id}_cardsandvalue",
             bottom_index,
             top_index,
         )
-        new_collection_list = {}
-        for item in collection_list:
+    new_collection_list = {}
+    for item in collection_list:
             data = json.loads(item)  # Convert JSON string to Python dict
             uuid = data["uuid"]
             value = data["value"]
@@ -379,24 +379,24 @@ def show_collection(interaction, member=None):
                 player_name
             ] = value  # Store in dict with player name as key
 
-        collection_list_names = "\n".join(
+    collection_list_names = "\n".join(
             f"# {key}          ‎" for key, value in new_collection_list.items()
         )
-        collection_list_values = "\n".join(
+    collection_list_values = "\n".join(
             f"# <:emerald:1340876788934643815> {value}"
             for key, value in new_collection_list.items()
         )
-        net_worth_sum = 0
-        for key, value in new_collection_list.items():
-            net_worth_sum += value
-        em = discord.Embed(title=f"{member}'s Collection", color=green)
-        em.add_field(name="Player", value=collection_list_names, inline=True)
-        em.add_field(name="Emeralds", value=collection_list_values, inline=True)
-        em.set_footer(
-            text=f"Net worth: {net_worth_sum}",
+    net_worth_sum = 0
+    for key, value in new_collection_list.items():
+           net_worth_sum += value
+    em = discord.Embed(title=f"{member}'s Collection", color=green)
+    em.add_field(name="Player", value=collection_list_names, inline=True)
+    em.add_field(name="Emeralds", value=collection_list_values, inline=True)
+    em.set_footer(
+             text=f"Net worth: {net_worth_sum}",
             icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
         )
-        return em
+    return em
 
 
 
