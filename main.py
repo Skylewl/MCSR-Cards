@@ -3,13 +3,13 @@ from time import gmtime, strftime, time
 import random
 from math import floor
 from functools import partial
-
+import json
 import redis
 import discord
 from discord.ext import commands
 import jojoepinger
 from bot_token import TOKEN
-
+from bot_token import TEST_BOT_TOKEN
 
 r = redis.Redis(
     host="localhost", port=6379, db=0, decode_responses=True
@@ -22,7 +22,7 @@ intents.members = True
 handler = logging.FileHandler(
     filename="discord.log", encoding="utf-8", mode="w"
 )  # log file
-bot = commands.Bot(command_prefix=["!", "$"], intents=intents)
+bot = commands.Bot(command_prefix=["!", "%"], intents=intents)
 
 # embed colors
 dark_gray = discord.Color.from_rgb(31, 30, 30)
@@ -75,12 +75,16 @@ def cooldown_command(interaction):
         rolls = r.get(rolls_key)
         time_left = r.ttl(rolls_key)
         timestamp = floor(time() + int(time_left))
-        rolls_message = f"You have {10-int(rolls)} rolls available & all 10 reset <t:{timestamp}:R>"
+        rolls_message = (
+            f"You have {10-int(rolls)} rolls available & all 10 reset <t:{timestamp}:R>"
+        )
     if r.exists(claims_key):
         claims = r.get(claims_key)
         time_left = r.ttl(claims_key)
         timestamp = floor(time() + int(time_left))
-        claims_message = f"You have {3-int(claims)} claims available & all 3 reset <t:{timestamp}:R>"
+        claims_message = (
+            f"You have {3-int(claims)} claims available & all 3 reset <t:{timestamp}:R>"
+        )
     em = discord.Embed(title="Cooldowns", color=0)
     em.add_field(name="Rolls", value=rolls_message, inline=False)
     em.add_field(name="Claims", value=claims_message, inline=False)
@@ -90,7 +94,7 @@ def cooldown_command(interaction):
 @bot.command(name="roll")
 async def roll(ctx):
     em, view = roll_command(interaction=ctx)
-    print('asdf')
+    print("asdf")
     print(em)
     await ctx.send(embed=em, view=view)
 
@@ -202,9 +206,19 @@ def roll_command(interaction):  # ROLL COMMAND
             r.lpush(
                 f"_s{interaction.guild.id}_claimed_cards", f"{str(card.uuid)}"
             )  # set card as claimed in the server
-            r.lpush(
-                f"_u{interaction.user.id}_s{interaction.guild.id}_cards", str(card.uuid)
-            )  # set card in users collection
+            if interaction.guild.id == 314080405084962826:
+                r.lpush(
+                    f"_u{interaction.user.id}_s{interaction.guild.id}_cards",
+                    str(card.uuid),
+                )
+                # r.lpush(
+                #      f"_u{interaction.user.id}_s{interaction.guild.id}_cardsandvalue", json.dumps({"uuid": str(card.uuid), "value": int(card.value)})
+                # )
+            else:
+                r.lpush(
+                    f"_u{interaction.user.id}_s{interaction.guild.id}_cards",
+                    str(card.uuid),
+                )  # set card in users collection
             r.set(
                 f"_c{str(card.uuid)}_s{interaction.guild.id}", f"{interaction.user.id}"
             )  # set user to card
@@ -214,19 +228,25 @@ def roll_command(interaction):  # ROLL COMMAND
             await interaction.message.edit(view=view)
 
     else:
-            owner = r.get(f"_c{random_card.uuid}_s{interaction.guild.id}")
-            user = interaction.guild.get_member(int(owner))
-            em.set_footer(
-                text=f"Emeralds: {random_card.value} | Owned by {user}",
-                icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
-            )
-            button = discord.ui.Button(label="Claimed", style=discord.ButtonStyle.secondary, disabled=True)
-            view = discord.ui.View()
-            async def button_callback(interaction: discord.Interaction,):
-                return
-            button.callback = partial(button_callback)
-            view.add_item(button)
-            return em, view
+        owner = r.get(f"_c{random_card.uuid}_s{interaction.guild.id}")
+        user = interaction.guild.get_member(int(owner))
+        em.set_footer(
+            text=f"Emeralds: {random_card.value} | Owned by {user}",
+            icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
+        )
+        button = discord.ui.Button(
+            label="Claimed", style=discord.ButtonStyle.secondary, disabled=True
+        )
+        view = discord.ui.View()
+
+        async def button_callback(
+            interaction: discord.Interaction,
+        ):
+            return
+
+        button.callback = partial(button_callback)
+        view.add_item(button)
+        return em, view
 
     view = discord.ui.View()
     button.callback = partial(button_callback, card=random_card)
@@ -344,6 +364,51 @@ async def collection_tree_command(
 
 
 def show_collection(interaction, member=None):
+    if member is None:
+        member = interaction.author
+    if interaction.guild.id == 314080405084962826:
+        if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1):
+            em = recalculate_emeralds(interaction=interaction)
+            return em
+        bottom_index = 0
+        top_index = -1
+        collection_list = r.lrange(
+            f"_u{member.id}_s{interaction.guild.id}_cardsandvalue",
+            bottom_index,
+            top_index,
+        )
+        new_collection_list = {}
+        for item in collection_list:
+            data = json.loads(item)  # Convert JSON string to Python dict
+            uuid = data["uuid"]
+            value = data["value"]
+
+            player_name = ignore_underscore(
+                jojoepinger.get_player_identifiers(uuid).name
+            )  # Assuming this function exists
+            new_collection_list[
+                player_name
+            ] = value  # Store in dict with player name as key
+
+        collection_list_names = "\n".join(
+            f"# {key}          ‎" for key, value in new_collection_list.items()
+        )
+        collection_list_values = "\n".join(
+            f"# <:emerald:1340876788934643815> {value}"
+            for key, value in new_collection_list.items()
+        )
+        net_worth_sum = 0
+        for key, value in new_collection_list.items():
+            net_worth_sum += value
+        em = discord.Embed(title=f"{member}'s Collection", color=green)
+        em.add_field(name="Player", value=collection_list_names, inline=True)
+        em.add_field(name="Emeralds", value=collection_list_values, inline=True)
+        em.set_footer(
+            text=f"Net worth: {net_worth_sum}",
+            icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
+        )
+        return em
+
     if member is None:
         member = interaction.author
     bottom_index = 0
@@ -583,6 +648,63 @@ async def update_player_pbs_command(ctx):
 async def update_player_list_command(ctx):
     em = jojoepinger.update_player_list()
     await ctx.send(embed=em)
+
+
+@bot.command(name="calcemeralds", aliases=["ce"])
+@commands.is_owner()
+async def calculate_emeralds_command(ctx):
+    em = calculate_emeralds(interaction=ctx)
+    await ctx.send(embed=em)
+
+
+def calculate_emeralds(interaction):
+    collection = r.lrange(
+        f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1
+    )
+
+    emerald_sum = 0
+    for item in collection:
+        card = json.loads(item)
+        emerald_sum += card.get("value", 0)
+    print(emerald_sum)
+    em = discord.Embed(
+        description=f"You have {emerald_sum} emeralds",
+        color=green,
+    )
+    return em
+
+
+@bot.command(name="rce")
+@commands.is_owner()
+async def recalculate_emeralds_command(ctx):
+    em = recalculate_emeralds(interaction=ctx)
+    await ctx.send(embed=em)
+
+
+def recalculate_emeralds(interaction):  # for emerald reworks
+    print("started recalculate_emeralds")
+    collection = r.lrange(
+        f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1
+    )
+    new_collection = r.lrange(
+        f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue", 0, -1
+    )
+    for i in collection:
+        if i not in new_collection:
+            name = jojoepinger.get_player_identifiers(i)
+            player_stats = jojoepinger.stats_from_name(name)
+            card = jojoepinger.create_card(name=name, player_stats=player_stats, uuid=i)
+            r.lpush(
+                f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue",
+                json.dumps({"uuid": card.uuid, "value": card.value}),
+            )
+    new_collection = r.lrange(
+        f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue", 0, -1
+    )
+    r.delete(f"_u{interaction.author.id}_s{interaction.guild.id}_cards")
+    print(new_collection)
+    em = discord.Embed(description="recalculated, use the collection command again")
+    return em
 
 
 try:
