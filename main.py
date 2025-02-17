@@ -206,19 +206,9 @@ def roll_command(interaction):  # ROLL COMMAND
             r.lpush(
                 f"_s{interaction.guild.id}_claimed_cards", f"{str(card.uuid)}"
             )  # set card as claimed in the server
-            if interaction.guild.id == 314080405084962826:
-                r.lpush(
-                    f"_u{interaction.user.id}_s{interaction.guild.id}_cards",
-                    str(card.uuid),
-                )
-                # r.lpush(
-                #      f"_u{interaction.user.id}_s{interaction.guild.id}_cardsandvalue", json.dumps({"uuid": str(card.uuid), "value": int(card.value)})
-                # )
-            else:
-                r.lpush(
-                    f"_u{interaction.user.id}_s{interaction.guild.id}_cards",
-                    str(card.uuid),
-                )  # set card in users collection
+            r.lpush(
+                  f"_u{interaction.user.id}_s{interaction.guild.id}_cardsandvalue", json.dumps({"uuid": str(card.uuid), "value": int(card.value)})
+            )
             r.set(
                 f"_c{str(card.uuid)}_s{interaction.guild.id}", f"{interaction.user.id}"
             )  # set user to card
@@ -366,7 +356,6 @@ async def collection_tree_command(
 def show_collection(interaction, member=None):
     if member is None:
         member = interaction.author
-    if interaction.guild.id == 314080405084962826:
         if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1):
             em = recalculate_emeralds(interaction=interaction)
             return em
@@ -409,27 +398,6 @@ def show_collection(interaction, member=None):
         )
         return em
 
-    if member is None:
-        member = interaction.author
-    bottom_index = 0
-    top_index = -1
-    collection_list = r.lrange(
-        f"_u{member.id}_s{interaction.guild.id}_cards", bottom_index, top_index
-    )
-    if not collection_list:
-        em = discord.Embed(description="Collection does not have any cards.", color=0)
-        return em
-    new_collection_list = []
-    for uuid in collection_list:
-        new_collection_list.append(
-            ignore_underscore(jojoepinger.get_player_identifiers(uuid).name)
-        )
-    new_collection_list = "\n".join(f"- {item}" for item in new_collection_list)
-    em = discord.Embed(
-        title=f"{member}'s Collection", description=f"{new_collection_list}", color=0
-    )
-    print(new_collection_list)
-    return em
 
 
 def ignore_underscore(s: str):
