@@ -22,7 +22,7 @@ intents.members = True
 handler = logging.FileHandler(
     filename="discord.log", encoding="utf-8", mode="w"
 )  # log file
-bot = commands.Bot(command_prefix=["!", "%"], intents=intents)
+bot = commands.Bot(command_prefix=["!", "$"], intents=intents)
 
 # embed colors
 dark_gray = discord.Color.from_rgb(31, 30, 30)
