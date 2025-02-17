@@ -354,46 +354,56 @@ async def collection_tree_command(
 
 
 def show_collection(interaction, member=None):
-    if member is None:
+    if member is None: # If no member arg given open message author's collection
         member = interaction.author
-    if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1):
+
+    if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1): # RECALC IF OLD COLLECTION SYSTEM
             em = recalculate_emeralds(interaction=interaction)
             return em
+    
+    key = f"_u{member.id}_s{interaction.guild.id}_cardsandvalue" # Sort collection by value
+    entire_collection_list = r.lrange(key, 0, -1)
+    parsed_list = [json.loads(item) for item in entire_collection_list]
+    net_worth_sum = 0
+    for i in parsed_list: # Calculate net worth
+        net_worth_sum += i['value']
+    sorted_list = sorted(parsed_list, key=lambda x: x["value"], reverse=True)
+    r.delete(key)  # Clear the old list
+    for item in sorted_list:
+        r.rpush(key, json.dumps(item))  # Push sorted items back
+    
     bottom_index = 0
-    top_index = -1
+    top_index = 9
     collection_list = r.lrange(
-            f"_u{member.id}_s{interaction.guild.id}_cardsandvalue",
+            key,
             bottom_index,
             top_index,
         )
     new_collection_list = {}
     for item in collection_list:
-            data = json.loads(item)  # Convert JSON string to Python dict
+            data = json.loads(item)
             uuid = data["uuid"]
             value = data["value"]
 
             player_name = ignore_underscore(
                 jojoepinger.get_player_identifiers(uuid).name
-            )  # Assuming this function exists
+            )  
             new_collection_list[
                 player_name
-            ] = value  # Store in dict with player name as key
-
+            ] = value
     collection_list_names = "\n".join(
-            f"# {key}          ‎" for key, value in new_collection_list.items()
+            f"| {key}          ‎" for key, value in new_collection_list.items()
         )
     collection_list_values = "\n".join(
-            f"# <:emerald:1340876788934643815> {value}"
+            f"<:Emerald:1335361652635209841> {value}"
             for key, value in new_collection_list.items()
         )
-    net_worth_sum = 0
-    for key, value in new_collection_list.items():
-           net_worth_sum += value
+    
     em = discord.Embed(title=f"{member}'s Collection", color=green)
     em.add_field(name="Player", value=collection_list_names, inline=True)
     em.add_field(name="Emeralds", value=collection_list_values, inline=True)
     em.set_footer(
-             text=f"Net worth: {net_worth_sum}",
+             text=f"Net worth: {net_worth_sum} | page buttons comign soon ,",
             icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
         )
     return em
@@ -627,7 +637,7 @@ async def calculate_emeralds_command(ctx):
 
 def calculate_emeralds(interaction):
     collection = r.lrange(
-        f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1
+        f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue", 0, -1
     )
 
     emerald_sum = 0
