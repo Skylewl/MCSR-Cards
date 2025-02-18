@@ -357,8 +357,8 @@ def show_collection(interaction, member=None):
     if member is None: # If no member arg given open message author's collection
         member = interaction.author
 
-    if r.lrange(f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1): # RECALC IF OLD COLLECTION SYSTEM
-            em = recalculate_emeralds(interaction=interaction)
+    if r.lrange(f"_u{member.id}_s{interaction.guild.id}_cards", 0, -1): # RECALC IF OLD COLLECTION SYSTEM
+            em = recalculate_emeralds(user_id=member.id, guild_id=interaction.guild.id)
             return em
     
     key = f"_u{member.id}_s{interaction.guild.id}_cardsandvalue" # Sort collection by value
@@ -480,7 +480,7 @@ def trade_card(interaction, member, player_one, player_two=None):
     name_one, uuid_one = jojoepinger.get_player_identifiers(player_one)
     if uuid_one is not None:
         collection_one = r.lrange(
-            f"_u{trade_offerer_id}_s{interaction.guild.id}_cards", 0, -1
+            f"_u{trade_offerer_id}_s{interaction.guild.id}_cardsandvalue", 0, -1
         )
         if uuid_one not in collection_one:
             em = discord.Embed(description="You don't have that player", color=0)
@@ -493,7 +493,7 @@ def trade_card(interaction, member, player_one, player_two=None):
         name_two, uuid_two = jojoepinger.get_player_identifiers(player_two)
         if uuid_two is not None:
             collection_two = r.lrange(
-                f"_u{trade_acceptor_id}_s{interaction.guild.id}_cards", 0, -1
+                f"_u{trade_acceptor_id}_s{interaction.guild.id}_cardsandvalue", 0, -1
             )
 
             if uuid_two not in collection_two:
@@ -503,18 +503,18 @@ def trade_card(interaction, member, player_one, player_two=None):
             async def button_callback(interaction: discord.Interaction):
                 if interaction.user.id is trade_acceptor_id:
                     collection_one = r.lrange(
-                        f"_u{trade_offerer_id}_s{interaction.guild.id}_cards", 0, -1
+                        f"_u{trade_offerer_id}_s{interaction.guild.id}_cardsandvalue", 0, -1
                     )  # check collection again on button press
                     if uuid_one in collection_one:
                         collection_two = r.lrange(
-                            f"_u{trade_acceptor_id}_s{interaction.guild.id}_cards",
+                            f"_u{trade_acceptor_id}_s{interaction.guild.id}_cardsandvalue",
                             0,
                             -1,
                         )
                         if uuid_two in collection_two:
                             await interaction.response.defer()
                             r.lrem(
-                                f"_u{trade_acceptor_id}_s{interaction.guild.id}_cards",
+                                f"_u{trade_acceptor_id}_s{interaction.guild.id}_cardsandvalue",
                                 count=1,
                                 value=uuid_two,
                             )  # delete acceptor's player
@@ -524,7 +524,7 @@ def trade_card(interaction, member, player_one, player_two=None):
                             )
 
                             r.lrem(
-                                f"_u{trade_offerer_id}_s{interaction.guild.id}_cards",
+                                f"_u{trade_offerer_id}_s{interaction.guild.id}_cardsandvalue",
                                 count=1,
                                 value=uuid_one,
                             )  # delete OP's player
@@ -534,7 +534,7 @@ def trade_card(interaction, member, player_one, player_two=None):
                             )
 
                             r.lpush(
-                                f"_u{trade_acceptor_id}_s{interaction.guild.id}_cards",
+                                f"_u{trade_acceptor_id}_s{interaction.guild.id}_cardsandvalue",
                                 uuid_one,
                             )  # add acceptor's player
                             r.set(
@@ -543,7 +543,7 @@ def trade_card(interaction, member, player_one, player_two=None):
                             )
 
                             r.lpush(
-                                f"_u{trade_offerer_id}_s{interaction.guild.id}_cards",
+                                f"_u{trade_offerer_id}_s{interaction.guild.id}_cardsandvalue",
                                 uuid_two,
                             )  # add OP's player
                             r.set(
@@ -659,13 +659,13 @@ async def recalculate_emeralds_command(ctx):
     await ctx.send(embed=em)
 
 
-def recalculate_emeralds(interaction):  # for emerald reworks
+def recalculate_emeralds(user_id, guild_id):  # for emerald reworks
     print("started recalculate_emeralds")
     collection = r.lrange(
-        f"_u{interaction.author.id}_s{interaction.guild.id}_cards", 0, -1
+        f"_u{user_id}_s{guild_id}_cards", 0, -1
     )
     new_collection = r.lrange(
-        f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue", 0, -1
+        f"_u{user_id}_s{guild_id}_cardsandvalue", 0, -1
     )
     for i in collection:
         if i not in new_collection:
@@ -673,13 +673,13 @@ def recalculate_emeralds(interaction):  # for emerald reworks
             player_stats = jojoepinger.stats_from_name(name)
             card = jojoepinger.create_card(name=name, player_stats=player_stats, uuid=i)
             r.lpush(
-                f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue",
+                f"_u{user_id}_s{guild_id}_cardsandvalue",
                 json.dumps({"uuid": card.uuid, "value": card.value}),
             )
     new_collection = r.lrange(
-        f"_u{interaction.author.id}_s{interaction.guild.id}_cardsandvalue", 0, -1
+        f"_u{user_id}_s{guild_id}_cardsandvalue", 0, -1
     )
-    r.delete(f"_u{interaction.author.id}_s{interaction.guild.id}_cards")
+    r.delete(f"_u{user_id}_s{guild_id}_cards")
     print(new_collection)
     em = discord.Embed(description="recalculated, use the collection command again")
     return em
