@@ -54,7 +54,7 @@ async def ping(ctx):
     await ctx.send("pong")
 
 
-@bot.command(name="cooldown")
+@bot.command(name="cooldown", aliases=["cooldowns", "cd", "cds"])
 async def cooldown(ctx):
     em = cooldown_command(interaction=ctx)
     await ctx.send(embed=em)
