@@ -227,7 +227,7 @@ def roll_command(interaction):  # ROLL COMMAND
         button = discord.ui.Button(
             label="Claimed", style=discord.ButtonStyle.secondary, disabled=True
         )
-        view = discord.ui.View()
+        view = discord.ui.View(timeout=None)
 
         async def button_callback(
             interaction: discord.Interaction,
@@ -238,7 +238,7 @@ def roll_command(interaction):  # ROLL COMMAND
         view.add_item(button)
         return em, view
 
-    view = discord.ui.View()
+    view = discord.ui.View(timeout=None)
     button.callback = partial(button_callback, card=random_card)
     view.add_item(button)
     return em, view
@@ -609,7 +609,7 @@ def trade_card(interaction, member, player_one, player_two=None):
 
     button = discord.ui.Button(label="Accept Trade", style=discord.ButtonStyle.green)
     button.callback = partial(button_callback)
-    view = discord.ui.View()
+    view = discord.ui.View(timeout=None)
     view.add_item(button)
     return em, view
 
