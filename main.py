@@ -338,75 +338,102 @@ def show_player(interaction, name: str):  # SHOW PLAYER COMMAND
             f.close()
         return em
 
-
 @bot.command(name="collection", aliases=["cards"])
 async def collection_command(ctx, member: discord.Member = None):
-    em = show_collection(interaction=ctx, member=member)
-    await ctx.send(embed=em)
-
+    await show_collection(ctx, member)
 
 @bot.tree.command(name="collection")
 async def collection_tree_command(
     interaction: discord.Interaction, member: discord.Member | None
 ):
-    em = show_collection(interaction=interaction, member=member)
-    await interaction.response.send_message(embed=em)
+    await show_collection(interaction, member)
 
+class CollectionView(discord.ui.View):
+    def __init__(self, interaction, member, sorted_list, page=0):
+        super().__init__()
+        self.interaction = interaction
+        self.member = member
+        self.sorted_list = sorted_list
+        self.page = page
+        self.items_per_page = 10
+        self.max_page = (len(sorted_list) - 1) // self.items_per_page
+        self.embed = self.create_embed()
 
-def show_collection(interaction, member=None):
-    if member is None: # If no member arg given open message author's collection
-        member = interaction.author
+    def create_embed(self):
+        """Creates an embed for the current page"""
+        start_idx = self.page * self.items_per_page
+        end_idx = start_idx + self.items_per_page
+        page_items = self.sorted_list[start_idx:end_idx]
 
-    if r.lrange(f"_u{member.id}_s{interaction.guild.id}_cards", 0, -1): # RECALC IF OLD COLLECTION SYSTEM
-            em = recalculate_emeralds(user_id=member.id, guild_id=interaction.guild.id)
-            return em
-    
-    key = f"_u{member.id}_s{interaction.guild.id}_cardsandvalue" # Sort collection by value
-    entire_collection_list = r.lrange(key, 0, -1)
-    parsed_list = [json.loads(item) for item in entire_collection_list]
-    net_worth_sum = 0
-    for i in parsed_list: # Calculate net worth
-        net_worth_sum += i['value']
-    sorted_list = sorted(parsed_list, key=lambda x: x["value"], reverse=True)
-    r.delete(key)  # Clear the old list
-    for item in sorted_list:
-        r.rpush(key, json.dumps(item))  # Push sorted items back
-    
-    bottom_index = 0
-    top_index = 9
-    collection_list = r.lrange(
-            key,
-            bottom_index,
-            top_index,
-        )
-    new_collection_list = {}
-    for item in collection_list:
-            data = json.loads(item)
-            uuid = data["uuid"]
-            value = data["value"]
+        new_collection_list = {}
+        net_worth_sum = sum(item['value'] for item in self.sorted_list)
 
+        for item in page_items:
+            uuid = item["uuid"]
+            value = item["value"]
             player_name = ignore_underscore(
                 jojoepinger.get_player_identifiers(uuid).name
-            )  
-            new_collection_list[
-                player_name
-            ] = value
-    collection_list_names = "\n".join(
-            f"| {key}          ‎" for key, value in new_collection_list.items()
+            )
+            new_collection_list[player_name] = value
+
+        collection_list_names = "\n".join(f"| {key}          ‎" for key in new_collection_list.keys())
+        collection_list_values = "\n".join(
+            f"<:Emerald:1335361652635209841> {value}" for value in new_collection_list.values()
         )
-    collection_list_values = "\n".join(
-            f"<:Emerald:1335361652635209841> {value}"
-            for key, value in new_collection_list.items()
-        )
-    
-    em = discord.Embed(title=f"{member}'s Collection", color=green)
-    em.add_field(name="Player", value=collection_list_names, inline=True)
-    em.add_field(name="Emeralds", value=collection_list_values, inline=True)
-    em.set_footer(
-             text=f"Net worth: {net_worth_sum} | page buttons comign soon ,",
+
+        em = discord.Embed(title=f"{self.member}'s Collection", color=discord.Color.green())
+        em.add_field(name="Player", value=collection_list_names or "No players found", inline=True)
+        em.add_field(name="Emeralds", value=collection_list_values or "N/A", inline=True)
+        em.set_footer(
+            text=f"Net worth: {net_worth_sum} | Page {self.page + 1}/{self.max_page + 1}",
             icon_url="https://static.wikia.nocookie.net/minecraft_gamepedia/images/2/26/Emerald_JE3_BE3.png",
         )
-    return em
+        return em
+
+    async def update_message(self, interaction):
+        """Updates the embed message with new page content"""
+        self.embed = self.create_embed()
+        await interaction.response.edit_message(embed=self.embed, view=self)
+
+    @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary, disabled=True)
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Handles previous page button"""
+        self.page -= 1
+        if self.page == 0:
+            self.children[0].disabled = True  # Disable "Prev" on first page
+        self.children[1].disabled = False  # Enable "Next" if moving back
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Handles next page button"""
+        self.page += 1
+        if self.page >= self.max_page:
+            self.children[1].disabled = True  # Disable "Next" on last page
+        self.children[0].disabled = False  # Enable "Prev" if moving forward
+        await self.update_message(interaction)
+
+async def show_collection(interaction, member=None):
+    if member is None:
+        member = interaction.author  # Use user instead of author for modern discord.py
+
+    if r.lrange(f"_u{member.id}_s{interaction.guild.id}_cards", 0, -1):
+        em = recalculate_emeralds(user_id=member.id, guild_id=interaction.guild.id)
+        return await interaction.response.send_message(embed=em)
+
+    key = f"_u{member.id}_s{interaction.guild.id}_cardsandvalue"
+    entire_collection_list = r.lrange(key, 0, -1)
+    parsed_list = [json.loads(item) for item in entire_collection_list]
+
+    sorted_list = sorted(parsed_list, key=lambda x: x["value"], reverse=True)
+
+    r.delete(key)
+    for item in sorted_list:
+        r.rpush(key, json.dumps(item))
+
+    view = CollectionView(interaction, member, sorted_list)
+    await interaction.message.reply(embed=view.embed, view=view)
+
 
 
 
